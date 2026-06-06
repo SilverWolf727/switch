@@ -1,0 +1,1 @@
+data,model,seq_len,pred_len,lr,mse,mae,val_mse,val_mae,train_mse,train_mae,training_time,norm_type,activation,n_block,dropout
