@@ -40,5 +40,12 @@ def metric(pred, true):
     mspe = MSPE(pred, true)
     rse = RSE(pred, true)
     corr = CORR(pred, true)
+    msmape = MSMAPE(pred, true)
 
-    return mae, mse, rmse, mape, mspe, rse, corr
+    return mae, mse, rmse, mape, mspe, rse, corr, msmape
+
+def MSMAPE(pred, true, epsilon=0.1):
+	comparator = np.full_like(true, 0.5 + epsilon)
+	denom = np.maximum(comparator, np.abs(pred) + np.abs(true) + epsilon)
+	msmape_per_series = np.mean(2 * np.abs(pred - true) / denom) * 100
+	return msmape_per_series
