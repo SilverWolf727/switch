@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+checkpoints/
+*.weights.h5
+~$*
+_docx_extracted.txt

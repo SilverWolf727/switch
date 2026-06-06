@@ -170,6 +170,11 @@ def parse_args():
 
   return args
 
+def MSMAPE(true, pred, epsilon=0.1):
+    comparator = tf.fill(tf.shape(true), 0.5 + epsilon)
+    denom = tf.maximum(comparator, tf.abs(pred) + tf.abs(true) + epsilon)
+    msmape_value = tf.reduce_mean(2 * tf.abs(pred - true) / denom) * 100
+    return msmape_value
 
 def main():
   args = parse_args()
@@ -223,7 +228,7 @@ def main():
     raise ValueError(f'Model not supported: {args.model}')
 
   optimizer = tf.keras.optimizers.Adam(learning_rate=args.learning_rate)
-  model.compile(optimizer=optimizer, loss='mse', metrics=['mae'])
+  model.compile(optimizer=optimizer, loss='mse', metrics=['mae','mape',MSMAPE])
   checkpoint_path = os.path.join(args.checkpoint_dir, f'{exp_id}_best.weights.h5')
   checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
       filepath=checkpoint_path,
@@ -262,6 +267,8 @@ def main():
       'lr': [args.learning_rate],
       'mse': [test_result[0]],
       'mae': [test_result[1]],
+      'mape': [test_result[2]],
+      'msmape': [test_result[3]],
       'val_mse': [history.history['val_loss'][best_epoch]],
       'val_mae': [history.history['val_mae'][best_epoch]],
       'train_mse': [history.history['loss'][best_epoch]],
