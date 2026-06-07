@@ -26,9 +26,9 @@ METRIC_RE = re.compile(
     r"mse:(?P<mse>[\d\.eE+-]+),\s*mae:(?P<mae>[\d\.eE+-]+),\s*"
     r"mape:(?P<mape>[\d\.eE+-]+),\s*msmape:(?P<msmape>[\d\.eE+-]+)"
 )
-# Tag: <dataset>_pl<pred_len>_lr<lr_tag>_do<do_tag>_ep<ep>_bs<bs>
+# Tag: <dataset>_M_in<enc_in>_pl<pred_len>_lr<lr_tag>_do<do_tag>_ep<ep>_bs<bs>
 TAG_RE = re.compile(
-    r"^(?P<dataset>etth1|electricity|weather)_pl(?P<pred_len>\d+)_lr(?P<lr>[\dp]+)_do(?P<do>[\dp]+)_ep(?P<ep>\d+)_bs(?P<bs>\d+)$"
+    r"^(?P<dataset>etth1|electricity|weather)_M_in\d+_pl(?P<pred_len>\d+)_lr(?P<lr>[\dp]+)_do(?P<do>[\dp]+)_ep(?P<ep>\d+)_bs(?P<bs>\d+)$"
 )
 
 

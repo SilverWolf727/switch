@@ -218,7 +218,6 @@ class Exp_Main(Exp_Basic):
 
         preds = []
         trues = []
-        inputx = []
         folder_path = './test_results/' + setting + '/'
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
@@ -267,7 +266,6 @@ class Exp_Main(Exp_Basic):
 
                 preds.append(pred)
                 trues.append(true)
-                inputx.append(batch_x.detach().cpu().numpy())
                 if i % 20 == 0:
                     input = batch_x.detach().cpu().numpy()
                     gt = np.concatenate((input[0, :, -1], true[0, :, -1]), axis=0)
@@ -280,7 +278,6 @@ class Exp_Main(Exp_Basic):
             
         preds = np.concatenate(preds, axis=0)
         trues = np.concatenate(trues, axis=0)
-        inputx = np.concatenate(inputx, axis=0)
 
         # result save
         folder_path = './results/' + setting + '/'
@@ -288,7 +285,7 @@ class Exp_Main(Exp_Basic):
             os.makedirs(folder_path)
 
         mae, mse, rmse, mape, mspe, rse, corr, msmape = metric(preds, trues)
-        print('mse:{}, mae:{}'.format(mse, mae))
+        print('mse:{}, mae:{}, mape:{}, msmape:{}'.format(mse, mae, mape, msmape))
         f = open("result.txt", 'a')
         f.write(setting + "  \n")
         f.write('mse:{}, mae:{}, mape:{}, msmape:{}'.format(mse, mae, mape, msmape))
@@ -299,7 +296,6 @@ class Exp_Main(Exp_Basic):
         # np.save(folder_path + 'metrics.npy', np.array([mae, mse, rmse, mape, mspe,rse, corr]))
         np.save(folder_path + 'pred.npy', preds)
         # np.save(folder_path + 'true.npy', trues)
-        # np.save(folder_path + 'x.npy', inputx)
         return
 
     def predict(self, setting, load=False):

@@ -72,29 +72,34 @@ def main():
             no_op_total += len(group)
 
     md = []
-    md.append("# DLinear 单变量时序预测 — 调参实验报告\n")
+    md.append("# DLinear 多变量时序预测 — 调参实验报告\n")
     md.append("> 生成脚本: `scripts/DLinear_tuning/generate_report.py`  ")
     md.append(f"> 数据来源: `results/results.csv` (共 {len(rows)} 次训练)  ")
     md.append(f"> 最优组合: `results/best_per_task.csv`\n")
 
     md.append("---\n")
     md.append("## 1. 实验目的\n")
-    md.append("在 DLinear 单变量 (`--features S`, `--enc_in 1`) 设置下, "
+    md.append("在 DLinear 多变量 (`--features M`) 设置下, "
               "通过网格搜索 `learning_rate` × `dropout` 两个超参数, "
-              "在 ETTh1、Electricity、Weather 三个数据集上、预测长度 96 与 192 上, "
-              "找到每个 (数据集, 预测长度) 任务的最优参数组合, "
-              "并与 DLinear 论文的默认参数 (lr=0.0001, dropout=0.05) 做对比。\n")
+              "在 ETTh1 (enc_in=7)、Electricity (enc_in=321)、Weather (enc_in=21) 三个数据集上、"
+              "预测长度 96 与 192 上, 找到每个 (数据集, 预测长度) 任务的最优参数组合, "
+              "并与 DLinear 论文的默认参数 (lr=0.0001, dropout=0.05) 做对比。\n"
+              "`enc_in` 设为该数据集原始通道数,模型采用 DLinear-S (共享 Linear),"
+              "即所有变量共用同一套 `seq_len → pred_len` 线性映射。\n")
 
     md.append("---\n")
     md.append("## 2. 模型介绍\n")
     md.append("**DLinear** (AAAI 2023, Zeng et al., https://arxiv.org/pdf/2205.13504v2) "
-              "是一个**单变量预测**模型。它将输入序列用 `moving_avg` (kernel_size=25) 分解为"
-              "**趋势项 (trend)** 和**季节项 (seasonal)**,然后对两部分分别用独立 Linear 层"
+              "是一个**多变量预测**模型。它将输入序列用 `moving_avg` (kernel_size=25) 分解为"
+              "**趋势项 (trend)** 和**季节项 (seasonal)**,然后对两部分分别用 Linear 层"
               "做 `seq_len → pred_len` 的线性映射,最后叠加输出。结构极简 (无 attention, "
-              "无 RNN, 也**无 Dropout**),但论文证明在多个基准上击败了 Transformer 系列。\n")
+              "无 RNN, 也**无 Dropout**),但论文证明在多个基准上击败了 Transformer 系列。\n"
+              "本实验使用 **DLinear-S (Shared)** 变体 (论文默认),即所有变量共用同一套 Linear;"
+              "另一种变体 DLinear-I (Individual) 为每个变量配独立 Linear,本次未做对比。\n")
     md.append("**公式:**  `X = X_trend + X_season`;  `Y = Linear_trend(X_trend) + Linear_season(X_season)`\n")
     md.append("**输入**: `seq_len=336`;  **预测**: `pred_len ∈ {96, 192}`;  "
-              "**优化器**: Adam;  **损失**: MSE;  **early stopping patience = train_epochs = 10**。\n")
+              "**优化器**: Adam;  **损失**: MSE;  **early stopping patience = train_epochs = 10**;  "
+              "**enc_in** 随数据集变化 (ETTh1=7 / Electricity=321 / Weather=21)。\n")
 
     md.append("---\n")
     md.append("## 3. 最优参数设置 (按 MSE 最小)\n")
@@ -150,12 +155,12 @@ def main():
               "若改为 Transformer 系列模型 (Informer/Autoformer),dropout 才会真正影响性能。\n")
 
     md.append("### 5.3 三个数据集的预测难度\n")
-    md.append("对比 ETTh1、Electricity、Weather 三个数据集的最优 MSE 量级,评估数据特性:\n")
-    md.append("| 数据集 | 通道数 | 采样间隔 | 数值范围 | 预测难度 |")
+    md.append("对比 ETTh1、Electricity、Weather 三个数据集在 M 模式下的最优 MSE 量级,评估数据特性:\n")
+    md.append("| 数据集 | enc_in (原始通道数) | 采样间隔 | 数值范围 | 预测难度 |")
     md.append("|---|---|---|---|---|")
-    md.append("| ETTh1 | 7 (单变量用 OT) | 1 h | 油温,有明显日/周周期 | 中 |")
-    md.append("| Electricity | 321 (单变量用 OT) | 1 h | 用电量,高方差、长尾 | 高 |")
-    md.append("| Weather | 21 (单变量用 OT) | 10 min | 气象,短时噪声大 | 低-中 |")
+    md.append("| ETTh1 | 7 | 1 h | 油温,有明显日/周周期 | 中 |")
+    md.append("| Electricity | 321 | 1 h | 用电量,高方差、长尾 | 高 |")
+    md.append("| Weather | 21 | 10 min | 气象,短时噪声大 | 低-中 |")
     md.append("")
     md.append("实际最优 MSE 也印证了这一点 (数值大小取决于数据本身,需结合量级判断):\n")
     md.append("| 数据集 | pl=96 最优 MSE | pl=192 最优 MSE |")
@@ -168,13 +173,18 @@ def main():
 
     md.append("---\n")
     md.append("## 6. 实验思考\n")
-    md.append("### 6.1 单变量 vs 多变量时序预测的优劣\n")
-    md.append("- **单变量 (S)** 只用 OT 列自身的历史,输入维度低、训练快、容易过拟合低。适合"
-              "目标变量自身有显著自相关、且对其他变量不敏感的场景 (例如天气)。\n")
-    md.append("- **多变量 (M)** 把所有通道一起预测,能捕捉通道间相关 (例如不同客户用电量互相影响),"
-              "但输入维度暴涨,需要更复杂的模型才能从中挖掘价值。\n")
-    md.append("- 对 DLinear 这种极简线性模型而言,多变量未必占优 (DLinear 论文 Table 7 中"
-              "M 列与 S 列差异不大);对 Transformer/TSMixer 等容量更大的模型,多变量优势更明显。\n")
+    md.append("### 6.1 多变量 (M) 预测的优劣 (本次实验采用)\n")
+    md.append("- **本次实验使用 M 模式**:将每个数据集的所有通道 (enc_in 分别为 7/321/21) "
+              "全部作为输入,模型对所有通道一起预测。M 模式能利用通道间的相关性"
+              "(例如不同客户的用电量互相影响,气象各要素耦合)。\n")
+    md.append("- **M 模式的代价**:输入维度大,模型仍要保持轻量。S 模式 (单变量) "
+              "只用 OT 列自身历史,适合目标变量自身有显著自相关、对其他变量不敏感的场景。\n")
+    md.append("- **DLinear-S 的特点**:所有通道共享同一套 Linear 权重,这意味着 DLinear-S "
+              "在 M 模式下参数量与 S 模式相同 (~130K),不会因为通道数变多而过拟合,"
+              "也意味着它对通道间非线性关系建模能力有限。\n")
+    md.append("- **M vs S 的选择**:DLinear 论文 Table 7/8 中 M 列与 S 列结果差异不大,"
+              "说明 DLinear 在这两种模式下表现接近。若要充分利用通道间关系,"
+              "可以换用 DLinear-I (每通道独立 Linear) 或 TSMixer/Transformer。\n")
     md.append("- **运营商网络场景**:流量/负载预测用多变量更合适 (基站之间存在空间相关性);"
               "单设备温度预测用单变量即可。\n")
 
