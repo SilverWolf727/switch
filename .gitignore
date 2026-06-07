@@ -3,4 +3,5 @@ __pycache__/
 checkpoints/
 *.weights.h5
 ~$*
+.~lock.*.docx#
 _docx_extracted.txt

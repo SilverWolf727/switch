@@ -1,8 +1,10 @@
 *.pyc
 *.pth
+*.pdf
+*.npy
 dataset/
 result.txt
 test_results/
-results/
+results/*/
 logs/
 .DS_Store
