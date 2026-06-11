@@ -3,7 +3,7 @@
 > 训练来源:
 > - 队友 hebinjie 52 次: `result_tuning.csv` (pl=96, 26 行) + `result_tuning_192.csv` (pl=192, 26 行)
 > - guoxq 8 次: `result_guoxq.csv` (4 个超参数各自独立扫描)
-> - baseline 6 行: `result.csv` (lr=0.0001, n_block=4, dropout=0.3, ff_dim=2048)
+> - baseline 6 行: `result.csv` (**lr=0.0001, n_block=4, dropout=0.3, ff_dim=32**,团队统一基线)
 >
 > 数据集: ETTh1 / weather / electricity × pred_len {96, 192}
 > 环境: tsmixer conda env (Python 3.10 + TF 2.21)
@@ -29,14 +29,15 @@
 
 ## 2. 实验分工与 baseline 差异 ⚠️
 
-| 来源 | run 数 | 默认 baseline |
+| 来源 | run 数 | 任务 |
 |---|---|---|
-| 队友 hebinjie | 52 | **n_block=4, dropout=0.3, lr=0.0001** |
-| guoxq (本次) | 8 | **n_block=2, dropout=0.05, lr=0.0001** (run.py 默认值) |
+| 队友 hebinjie | 52 | 在团队 baseline (nb=4, do=0.3, lr=0.0001, ff_dim=32) 基础上做 grid search |
+| **guoxq (本次)** | **8** | **没跑 baseline**,只在 run.py 默认值 (nb=2, do=0.05, lr=0.0001, ff_dim=2048) 上各动一个超参数,各跑 pl=96/192 |
+| 团队 baseline | 6 | lr=0.0001, n_block=4, dropout=0.3, ff_dim=32 (commit `c1ef046`) |
 
-⚠️ 两组 run 的 "default" **不一样**,不能直接把两组数据合并做网格平均。下方分析只对**同一 baseline 内**的 run 做均值/对比。
+⚠️ 我和队友**用了不同的 baseline**(他用团队基线 nb=4/do=0.3/ff_dim=32;我严格用 run.py 默认 nb=2/do=0.05/ff_dim=2048),所以**两组 run 不能直接做网格平均**。下方分析只对**同一 baseline 内**的 run 做对比。
 
-> 之所以有这个差异:队友的 baseline 来自 commit `c1ef046` 的 TSMixer 基础实验(用 n_block=4, dropout=0.3, lr=0.0001 跑 6 次 baseline);我的 8 个 run 严格遵守 run.py 默认值(n_block=2, dropout=0.05),所以两组 run **覆盖了不同的参数区域**。
+> 历史原因:队友的 baseline 是 `c1ef046` 提交时定的团队基线;我的 8 个 run 是按组员分配的参数严格使用 run.py 默认值(没改动 baseline),所以两组 run 覆盖了不同的参数区域。
 
 ---
 
@@ -100,16 +101,16 @@
 
 ### 4.4 ff_dim (guoxq 实验)
 
-只跑了 weather × {96, 192},在 **不同 baseline** (n_block=2, dropout=0.05) 下与队友的最优比:
+只跑了 weather × {96, 192},在 **guoxq baseline** (n_block=2, dropout=0.05) 下与团队 baseline 比较:
 
-| 数据集 | pl | ff_dim=16 (guoxq) | ff_dim=2048 (guoxq 默认) | ff_dim=2048 + nb=6, do=0.5 (队友最优) |
+| 数据集 | pl | ff_dim=16 (guoxq) | ff_dim=2048 (guoxq 默认) | 团队 baseline (ff_dim=32) |
 |---|---|---|---|---|
-| weather | 96 | 0.1651 | 0.1822 | **0.1469** |
-| weather | 192 | 0.2165 | 0.2178 | **0.1932** |
+| weather | 96 | 0.1651 | 0.1822 | **0.1536** |
+| weather | 192 | 0.2165 | 0.2178 | **0.1949** |
 
 **结论**:
-- **ff_dim=16 vs 2048 在 weather 上几乎打平** (pl=96 略胜,pl=192 略差),说明默认 `ff_dim=2048` 对 weather 这种**小通道 (21)** 数据**严重冗余**。把 99% 参数砍掉反而略好,印证模型表达能力对这种小数据集是过剩的。
-- 但**真正的最优**来自队友用 **n_block=6 + dropout=0.5** 跑出的 0.1469 (pl=96),效果更显著。两个旋钮都比 ff_dim 重要。
+- 在 guoxq baseline 下 **ff_dim=16 vs 2048 几乎打平** (pl=96 略胜,pl=192 略差),说明默认 `ff_dim=2048` 对 weather 这种**小通道 (21)** 数据**严重冗余**。把 99% 参数砍掉反而略好,印证模型表达能力对这种小数据集是过剩的。
+- 但**团队 baseline (ff_dim=32 + nb=4 + do=0.3)** 仍优于 guoxq 任何 ff_dim 选择,说明 **n_block 和 dropout 比 ff_dim 更重要**。
 
 ---
 
@@ -162,7 +163,7 @@
 
 | 路径 | 内容 |
 |---|---|
-| `code/tsmixer_basic/result.csv` | baseline 6 行 (n_block=4, dropout=0.3) |
+| `code/tsmixer_basic/result.csv` | 团队 baseline 6 行 (nb=4, do=0.3, ff_dim=32) |
 | `code/tsmixer_basic/result_tuning.csv` | 队友 hebinjie pl=96 26 行 |
 | `code/tsmixer_basic/result_tuning_192.csv` | 队友 hebinjie pl=192 26 行 |
 | `code/tsmixer_basic/result_guoxq.csv` | guoxq 8 行 (lr/do/nb/ff_dim 各 2) |
